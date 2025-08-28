@@ -8,6 +8,7 @@ import {
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useNotification } from '../context/NotificationContext'; // Importe o hook de notificação
 
 function TelaVenda() {
     // Estado dos dados da venda
@@ -21,6 +22,7 @@ function TelaVenda() {
     const [qtdParaAdicionar, setQtdParaAdicionar] = useState(1);
     
     const navigate = useNavigate();
+    const { showNotification } = useNotification(); // Importe o hook de notificação
 
     // Carrega a lista de livros da API quando o componente monta
     useEffect(() => {
@@ -38,11 +40,11 @@ function TelaVenda() {
     // Lógica para adicionar um item ao carrinho
     const handleAddToCart = () => {
       if (!livroParaAdicionar || qtdParaAdicionar <= 0) {
-        alert("Selecione um livro e uma quantidade válida.");
+        showNotification("Selecione um livro e uma quantidade válida.", 'error');
         return;
       }
       if (qtdParaAdicionar > livroParaAdicionar.estoque) {
-        alert(`Estoque insuficiente. Apenas ${livroParaAdicionar.estoque} unidades disponíveis.`);
+        showNotification(`Estoque insuficiente. Apenas ${livroParaAdicionar.estoque} unidades disponíveis.`, 'error');
         return;
       }
       
@@ -98,11 +100,11 @@ function TelaVenda() {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (carrinho.length === 0) {
-            alert("O carrinho está vazio.");
+            showNotification("O carrinho está vazio.", 'error');
             return;
         }
         if (Math.abs(restante) > 0.001) {
-            alert(`O total pago (${formatarMoeda(totalPago)}) não corresponde ao total da venda (${formatarMoeda(totalVenda)}).`);
+            showNotification(`O total pago (${formatarMoeda(totalPago)}) não corresponde ao total da venda (${formatarMoeda(totalVenda)}).`, 'error');
             return;
         }
         
@@ -110,10 +112,10 @@ function TelaVenda() {
 
         api.post('/vendas', vendaData)
             .then(() => {
-                alert('Venda registrada com sucesso!');
+                showNotification('Venda registrada com sucesso!');
                 navigate('/relatorio');
             })
-            .catch(error => alert(`Erro: ${error.response?.data?.error || 'Não foi possível registrar a venda.'}`));
+            .catch(error => showNotification(`Erro: ${error.response?.data?.error || 'Não foi possível registrar a venda.'}`, 'error'));
     };
 
     return (

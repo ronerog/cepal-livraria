@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { Typography, TextField, Button, Box, Paper, Stack } from '@mui/material';
+import { useNotification } from '../context/NotificationContext'; // Importe o hook de notificação
 
 function FormLivro() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showNotification } = useNotification(); 
   const [livro, setLivro] = useState({ titulo: '', autor: '', preco: '', estoque: '' });
   const isEditing = Boolean(id);
 
@@ -30,10 +32,10 @@ function FormLivro() {
     // O cookie de autenticação é enviado automaticamente pelo navegador.
     api[metodo](url, livro)
       .then(() => {
-        alert(`Livro ${isEditing ? 'atualizado' : 'adicionado'} com sucesso!`);
+        showNotification(`Livro ${isEditing ? 'atualizado' : 'adicionado'} com sucesso!`);
         navigate('/');
       })
-      .catch(error => alert(`Erro: ${error.response?.data?.error || error.message}`));
+      .catch(error => showNotification(`Erro: ${error.response?.data?.error || error.message}`, 'error'));
   };
 
   return (

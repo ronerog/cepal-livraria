@@ -3,16 +3,20 @@ import { Link } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 import { useAuth } from '../context/AuthContext'; // Importa o hook para acessar o contexto
 import PasswordPrompt from './PasswordPrompt';     // Importa o pop-up de senha
+import { useNotification } from '../context/NotificationContext'; // Importe o hook de notificação
 
 function Navbar() {
   const { isAdmin, login, logout } = useAuth(); // Pega o estado (isAdmin) e as funções do contexto
   const [dialogOpen, setDialogOpen] = useState(false); // Estado para controlar o pop-up
+  const { showNotification } = useNotification(); // Pega a função de notificação do contexto
 
   // Função que será chamada pelo pop-up ao confirmar a senha
   const handleLogin = async (password) => {
     const success = await login(password);
     if (!success) {
-      alert("Senha incorreta!");
+      showNotification("Senha incorreta!", 'error');
+    } else {
+      showNotification("Login bem-sucedido!", 'success');
     }
   };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext'; // 1. Importa o hook de autenticação
+import { useNotification } from '../context/NotificationContext'; // Importe o hook de notificação
 
 import { 
   Typography, Button, Box, Table, TableBody, TableCell, 
@@ -14,6 +15,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 function ListaLivros() {
   const { isAdmin } = useAuth(); // 2. Pega o estado de admin do contexto
   const [livros, setLivros] = useState([]);
+  const { showNotification } = useNotification(); // 3. Pega a função de notificação do contexto
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [filtroNome, setFiltroNome] = useState('');
@@ -34,11 +36,11 @@ function ListaLivros() {
       // O cookie de autenticação é enviado automaticamente pelo navegador
       api.delete(`/livros/${id}`)
         .then(() => {
-          alert('Livro deletado com sucesso!');
+          showNotification('Livro deletado com sucesso!');
           carregarLivros(); // Recarrega a lista
         })
         .catch(error => {
-            alert(`Erro ao deletar livro: ${error.response?.data?.error || error.message}`);
+            showNotification(`Erro ao deletar livro: ${error.response?.data?.error || error.message}`, 'error');
         });
     }
   };
