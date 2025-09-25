@@ -1,6 +1,6 @@
 # Livraria-CEPAL
 
-Este é um projeto full-stack de um sistema de livraria, dividido em um backend de Node.js com Express e um frontend de React com Vite.
+Este é um projeto full-stack de um sistema de venda de livros para a BIENAL. A maior feira de livros do país, dividido em um backend de Node.js com Express e um frontend de React com Vite.
 
 ## Backend
 
