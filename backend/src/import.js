@@ -23,7 +23,7 @@ async function importarLivros() {
   const stream = fs.createReadStream(filePath, { encoding: 'latin1' })
     .pipe(csv({ 
         separator: ';', 
-        skipLines: 1,
+        // skipLines: 1,
         mapHeaders: ({ header }) => header.trim()
     }));
 

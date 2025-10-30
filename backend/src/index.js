@@ -9,7 +9,7 @@ const app = express();
 const port = 5001;
 
 // Middlewares
-app.use(cors({ origin: true, credentials: true })); // aceita qualquer origem
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -45,6 +45,20 @@ app.post('/api/login', (req, res) => {
   res.status(401).json({ error: 'Senha incorreta' });
 });
 
+app.get('/api/livros/codigo/:codigo', async (req, res) => {
+  const { codigo } = req.params;
+  try {
+    const result = await db.query('SELECT * FROM livros WHERE codigo_barras = $1', [codigo]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Livro não encontrado' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro no servidor' });
+  }
+});
+
 // Logout
 app.post('/api/logout', (req, res) => {
   res.clearCookie('auth_token');
@@ -76,37 +90,40 @@ app.get('/api/livros/:id', async (req, res) => {
 });
 
 // Adicionar livro
-app.post('/api/livros', authMiddleware, async (req, res) => {
+app.post('/api/livros', async (req, res) => {
+  // 1. Adicione codigo_barras à desestruturação
+  const { titulo, autor, preco, estoque, codigo_barras } = req.body;
   try {
-    const { titulo, autor, preco, estoque } = req.body;
-    const newLivro = await db.query(
-      "INSERT INTO livros (titulo, autor, preco, estoque) VALUES ($1, $2, $3, $4) RETURNING *",
-      [titulo, autor, preco, estoque]
+    const result = await db.query(
+      // 2. Adicione a coluna e o valor no comando SQL
+      'INSERT INTO livros (titulo, autor, preco, estoque, codigo_barras) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [titulo, autor, preco, estoque, codigo_barras]
     );
-    res.status(201).json(newLivro.rows[0]);
+    res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao inserir livro' });
   }
 });
 
 // Atualizar livro
-app.put('/api/livros/:id', authMiddleware, async (req, res) => {
+app.put('/api/livros/:id', async (req, res) => {
+  const { id } = req.params;
+  // 1. Adicione codigo_barras à desestruturação
+  const { titulo, autor, preco, estoque, codigo_barras } = req.body;
   try {
-    const { id } = req.params;
-    const { titulo, autor, preco, estoque } = req.body;
-    const updateQuery = `
-      UPDATE livros 
-      SET titulo = $1, autor = $2, preco = $3, estoque = $4 
-      WHERE id = $5 
-      RETURNING *
-    `;
-    const { rows } = await db.query(updateQuery, [titulo, autor, preco, estoque, id]);
-    if (rows.length === 0) return res.status(404).json({ error: 'Livro não encontrado para atualizar' });
-    res.json(rows[0]);
+    const result = await db.query(
+      // 2. Adicione a coluna e o valor no comando SQL
+      'UPDATE livros SET titulo = $1, autor = $2, preco = $3, estoque = $4, codigo_barras = $5 WHERE id = $6 RETURNING *',
+      [titulo, autor, preco, estoque, codigo_barras, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Livro não encontrado' });
+    }
+    res.json(result.rows[0]);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao atualizar livro' });
   }
 });
 
@@ -127,93 +144,113 @@ app.delete('/api/livros/:id', authMiddleware, async (req, res) => {
 // Listar vendas
 app.get('/api/vendas', async (req, res) => {
   try {
-    const query = `
+    const result = await db.query(`
       SELECT 
-          v.id, 
-          v.preco_total, 
-          v.forma_pagamento, 
-          v.nome_comprador, 
-          v.data_venda,
-          json_agg(json_build_object(
-              'livro_titulo', l.titulo,
-              'quantidade', vi.quantidade,
-              'preco_unitario', vi.preco_unitario
-          )) as itens
+        v.id, 
+        v.nome_comprador, 
+        v.subtotal,    
+        v.desconto,     
+        v.total,         
+        v.data_venda, 
+        json_agg(
+          json_build_object(
+            'livro', l.titulo, 
+            'quantidade', vi.quantidade, 
+            'preco_unitario', vi.preco_unitario
+          )
+        ) as itens
       FROM vendas v
       JOIN venda_itens vi ON v.id = vi.venda_id
       JOIN livros l ON vi.livro_id = l.id
       GROUP BY v.id
-      ORDER BY v.data_venda DESC;
-    `;
-    const { rows } = await db.query(query);
-    res.json(rows);
+      ORDER BY v.data_venda DESC
+    `);
+    res.json(result.rows);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    console.error("Erro ao buscar vendas:", err);
+    res.status(500).json({ error: 'Erro ao buscar vendas' });
   }
 });
 
 // Registrar venda (otimizado)
 app.post('/api/vendas', async (req, res) => {
-  const { carrinho, pagamentos, nomeComprador } = req.body;
+  const { carrinho, pagamentos, nomeComprador, subtotal, desconto, total } = req.body;
+
   const client = await db.getClient();
 
-  try {
+    try {
     await client.query('BEGIN');
 
-    // Obtem livros do carrinho de uma vez
-    const ids = carrinho.map(item => item.livro.id);
-    const livrosRes = await client.query(
-      `SELECT id, preco, estoque, titulo FROM livros WHERE id = ANY($1) FOR UPDATE`,
-      [ids]
-    );
-    const livrosMap = {};
-    livrosRes.rows.forEach(l => { livrosMap[l.id] = l; });
+    // Insere a venda na tabela 'vendas' com os campos corretos
+    const vendaQuery = `
+      INSERT INTO vendas (nome_comprador, subtotal, desconto, total) 
+      VALUES ($1, $2, $3, $4) RETURNING id
+    `;
+    const vendaResult = await client.query(vendaQuery, [nomeComprador, subtotal, desconto, total]);
+    const vendaId = vendaResult.rows[0].id;
 
-    // Verifica estoque e calcula preço total
-    let precoTotal = 0;
+    // Itera sobre cada item do carrinho para:
+    // 1. Inserir em 'venda_itens'
+    // 2. Atualizar o estoque em 'livros'
     for (const item of carrinho) {
-      const livro = livrosMap[item.livro.id];
-      if (!livro) throw new Error(`Livro com ID ${item.livro.id} não encontrado.`);
-      if (livro.estoque < item.quantidade) throw new Error(`Estoque insuficiente para o livro: ${livro.titulo}`);
-      precoTotal += livro.preco * item.quantidade;
+      // Insere o item na tabela 'venda_itens'
+      await client.query(
+        'INSERT INTO venda_itens (venda_id, livro_id, quantidade, preco_unitario) VALUES ($1, $2, $3, $4)',
+        [vendaId, item.livro.id, item.quantidade, item.livro.preco]
+      );
+      
+      // Atualiza (diminui) o estoque do livro correspondente
+      const updateEstoqueResult = await client.query(
+        'UPDATE livros SET estoque = estoque - $1 WHERE id = $2 AND estoque >= $1',
+        [item.quantidade, item.livro.id]
+      );
+
+      // Se a atualização do estoque não afetou nenhuma linha, o estoque era insuficiente.
+      if (updateEstoqueResult.rowCount === 0) {
+        throw new Error(`Estoque insuficiente para o livro: ${item.livro.titulo}`);
+      }
     }
 
-    // Insere venda
-    const vendaQuery = `
-      INSERT INTO vendas (preco_total, forma_pagamento, nome_comprador)
-      VALUES ($1, $2, $3) RETURNING id
-    `;
-    const novaVenda = await client.query(vendaQuery, [precoTotal, JSON.stringify(pagamentos), nomeComprador]);
-    const vendaId = novaVenda.rows[0].id;
-
-    // Insere itens e atualiza estoque de uma vez
-    const insertPromises = carrinho.map(item => {
-      const livro = livrosMap[item.livro.id];
-      return Promise.all([
-        client.query(
-          `INSERT INTO venda_itens (venda_id, livro_id, quantidade, preco_unitario)
-           VALUES ($1, $2, $3, $4)`,
-          [vendaId, livro.id, item.quantidade, livro.preco]
-        ),
-        client.query(
-          `UPDATE livros SET estoque = estoque - $1 WHERE id = $2`,
-          [item.quantidade, livro.id]
-        )
-      ]);
-    });
-    await Promise.all(insertPromises);
-
+    // Se tudo deu certo, confirma a transação
     await client.query('COMMIT');
-    res.status(201).json({ id: vendaId, message: 'Venda registrada com sucesso' });
+    res.status(201).json({ message: 'Venda registrada com sucesso!', vendaId });
 
-  } catch (err) {
+  } catch (error) {
+    // Se qualquer passo falhou, desfaz todas as operações
     await client.query('ROLLBACK');
-    console.error(err.message);
-    res.status(400).json({ error: err.message });
+    console.error('Erro ao registrar venda:', error);
+    res.status(500).json({ error: error.message || 'Erro interno do servidor ao registrar a venda.' });
   } finally {
+    // Libera a conexão de volta para a pool
     client.release();
   }
+});
+
+app.post('/api/verify-cortesia', (req, res) => {
+  try {
+    const { password } = req.body;
+    console.log('[verify-cortesia] senha recebida:', JSON.stringify(password));
+    console.log('[verify-cortesia] ADMIN_PASSWORD env:', JSON.stringify(process.env.ADMIN_PASSWORD));
+
+    if (!password) return res.status(400).json({ error: 'Senha é obrigatória.' });
+
+    if (String(password).trim() === String(process.env.ADMIN_PASSWORD || '').trim()) {
+      return res.status(200).json({ message: 'Senha válida' });
+    }
+    return res.status(401).json({ error: 'Senha incorreta' });
+  } catch (err) {
+    console.error('[verify-cortesia] erro:', err);
+    return res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// também expor sem /api caso algum lugar chame /verify-cortesia
+app.post('/verify-cortesia', (req, res) => {
+  const { password } = req.body;
+  if (String(password || '').trim() === String(process.env.ADMIN_PASSWORD || '').trim()) {
+    return res.status(200).json({ message: 'Senha válida' });
+  }
+  return res.status(401).json({ error: 'Senha incorreta' });
 });
 
 // Inicia servidor

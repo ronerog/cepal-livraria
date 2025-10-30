@@ -1,5 +1,4 @@
 import React from 'react';
-// 1. Mude a importação aqui
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { CssBaseline, Container } from '@mui/material';
 
@@ -11,7 +10,6 @@ import RelatorioVendas from './pages/RelatorioVendas';
 
 function App() {
   return (
-    // 2. E mude o nome do componente aqui
     <Router>
       <CssBaseline />
       <Navbar />
@@ -23,6 +21,7 @@ function App() {
             <Route path="/livro/editar/:id" element={<FormLivro />} />
             <Route path="/vender" element={<TelaVenda />} />
             <Route path="/relatorio" element={<RelatorioVendas />} />
+            <Route path="/lista-livros" element={<ListaLivros />} />
           </Routes>
         </Container>
       </main>
