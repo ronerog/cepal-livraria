@@ -8,7 +8,7 @@ function FormLivro() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showNotification } = useNotification(); 
-  const [livro, setLivro] = useState({ titulo: '', autor: '', preco: '', estoque: '' });
+  const [livro, setLivro] = useState({ titulo: '', autor: '', preco: '', estoque: '', codigo_barras: '' });
   const isEditing = Boolean(id);
 
   useEffect(() => {
@@ -22,20 +22,25 @@ function FormLivro() {
     setLivro(prevState => ({ ...prevState, [name]: value }));
   };
 
-  // A função de submit volta a ser simples, sem pedir senha
-  const handleSubmit = (e) => {
+const handleSubmit = (e) => {
     e.preventDefault();
-    const metodo = isEditing ? 'put' : 'post';
-    const url = isEditing ? `/livros/${id}` : '/livros';
+    const method = id ? 'put' : 'post';
+    const url = id ? `/livros/${id}` : '/livros';
 
-    // A senha não é mais necessária aqui!
-    // O cookie de autenticação é enviado automaticamente pelo navegador.
-    api[metodo](url, livro)
+    const dadosParaEnviar = {
+      ...livro,
+      preco: parseFloat(livro.preco),
+      estoque: parseInt(livro.estoque, 10),
+    };
+
+    api[method](url, dadosParaEnviar)
       .then(() => {
-        showNotification(`Livro ${isEditing ? 'atualizado' : 'adicionado'} com sucesso!`);
-        navigate('/');
+        navigate('/lista-livros');
       })
-      .catch(error => showNotification(`Erro: ${error.response?.data?.error || error.message}`, 'error'));
+      .catch(error => {
+        console.error("Erro ao salvar o livro!", error);
+        // Adicione um feedback para o usuário aqui
+      });
   };
 
   return (
@@ -47,6 +52,7 @@ function FormLivro() {
         <Stack spacing={2}>
           <TextField label="Título" name="titulo" value={livro.titulo} onChange={handleChange} fullWidth required />
           <TextField label="Autor" name="autor" value={livro.autor || ''} onChange={handleChange} fullWidth />
+          <TextField label="Código de Barras" name="codigo_barras" value={livro.codigo_barras || ''} onChange={handleChange} fullWidth required />
           <TextField label="Preço" name="preco" type="number" value={livro.preco} onChange={handleChange} fullWidth required inputProps={{ step: "0.01" }} />
           <TextField label="Estoque" name="estoque" type="number" value={livro.estoque} onChange={handleChange} fullWidth required />
           <Box>
