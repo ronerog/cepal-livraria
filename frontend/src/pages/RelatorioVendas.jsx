@@ -56,13 +56,13 @@ function RelatorioVendas() {
     
     // --- AJUSTE NO CABEÇALHO DO PDF ---
     const tableBody = [];
-    const tableHead = [['ID', 'Horário', 'Comprador', 'Itens', 'Subtotal', 'Desconto', 'Total']];
+    const tableHead = [['ID', 'Horário', 'Comprador', 'Itens', 'Forma de Pagamento','Subtotal', 'Desconto', 'Total']];
 
     Object.keys(vendasAgrupadas).forEach(data => {
       const dadosDia = vendasAgrupadas[data];
       tableBody.push([{ 
         content: `Vendas de ${data} - Total do Dia: ${formatarMoeda(dadosDia.totalDia)}`, 
-        colSpan: 7, // Colspan atualizado para 7 colunas
+        colSpan: 8, // Colspan atualizado para 8 colunas
         styles: { fontStyle: 'bold', fillColor: '#d3d3d3', textColor: '#000' } 
       }]);
       
@@ -75,6 +75,7 @@ function RelatorioVendas() {
           formatarHora(venda.data_venda), // Adicionado
           venda.nome_comprador || 'N/A',
           itensString,
+          venda.forma_pagamento || 'N/A',
           formatarMoeda(venda.subtotal),
           `- ${formatarMoeda(venda.desconto)}`,
           formatarMoeda(venda.total)
@@ -139,6 +140,7 @@ function RelatorioVendas() {
                       <TableCell>Horário</TableCell>
                       <TableCell>Comprador</TableCell>
                       <TableCell>Itens da Venda</TableCell>
+                      <TableCell>Forma de Pagamento</TableCell>
                       <TableCell align="right">Subtotal</TableCell>
                       <TableCell align="right">Desconto</TableCell>
                       <TableCell align="right">Total</TableCell>
@@ -162,6 +164,7 @@ function RelatorioVendas() {
                             ))}
                           </List>
                         </TableCell>
+                        <TableCell>{venda.forma_pagamento || 'N/A'}</TableCell>
                         <TableCell align="right">{formatarMoeda(venda.subtotal)}</TableCell>
                         <TableCell align="right" sx={{ color: 'error.main' }}>- {formatarMoeda(venda.desconto)}</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 'bold' }}>{formatarMoeda(venda.total)}</TableCell>

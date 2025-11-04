@@ -7,6 +7,7 @@ import ListaLivros from './pages/ListaLivros';
 import FormLivro from './pages/FormLivro';
 import TelaVenda from './pages/TelaVenda';
 import RelatorioVendas from './pages/RelatorioVendas';
+import RelatoriosPage from './pages/RelatoriosPage';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
             <Route path="/vender" element={<TelaVenda />} />
             <Route path="/relatorio" element={<RelatorioVendas />} />
             <Route path="/lista-livros" element={<ListaLivros />} />
+            <Route path="/relatorios" element={<RelatoriosPage />} />
           </Routes>
         </Container>
       </main>
