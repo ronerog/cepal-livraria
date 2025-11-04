@@ -4,9 +4,9 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext'; // 1. Importa o hook de autenticação
 import { useNotification } from '../context/NotificationContext'; // Importe o hook de notificação
 
-import { 
-  Typography, Button, Box, Table, TableBody, TableCell, 
-  TableContainer, TableHead, TableRow, Paper, IconButton, TablePagination, TextField 
+import {
+  Typography, Button, Box, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Paper, IconButton, TablePagination, TextField
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -30,7 +30,6 @@ function ListaLivros() {
     carregarLivros();
   }, []);
 
-  // 3. A lógica de deletar fica mais simples, sem pedir senha
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja deletar este livro?')) {
       // O cookie de autenticação é enviado automaticamente pelo navegador
@@ -40,7 +39,7 @@ function ListaLivros() {
           carregarLivros(); // Recarrega a lista
         })
         .catch(error => {
-            showNotification(`Erro ao deletar livro: ${error.response?.data?.error || error.message}`, 'error');
+          showNotification(`Erro ao deletar livro: ${error.response?.data?.error || error.message}`, 'error');
         });
     }
   };
@@ -50,10 +49,16 @@ function ListaLivros() {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
-  
-  const livrosFiltrados = livros.filter(livro =>
-    livro.titulo.toLowerCase().includes(filtroNome.toLowerCase())
-  );
+
+  const removerAcentos = (texto) =>
+    texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const livrosFiltrados = livros.filter(livro => {
+    const filtro = removerAcentos(filtroNome.toLowerCase());
+    const titulo = removerAcentos(livro.titulo?.toLowerCase() || '');
+    const autor = removerAcentos(livro.autor?.toLowerCase() || '');
+    return titulo.includes(filtro) || autor.includes(filtro);
+  });
 
   return (
     <>
@@ -79,7 +84,7 @@ function ListaLivros() {
         <TextField
           fullWidth
           variant="outlined"
-          label="Pesquisar por Título"
+          label="Pesquisar por Título ou Autor"
           value={filtroNome}
           onChange={(e) => {
             setFiltroNome(e.target.value);
@@ -126,11 +131,11 @@ function ListaLivros() {
             </TableBody>
           </Table>
         </TableContainer>
-        
+
         <TablePagination
           rowsPerPageOptions={[5, 10, 25, 50]}
           component="div"
-          count={livrosFiltrados.length} 
+          count={livrosFiltrados.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

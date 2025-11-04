@@ -91,13 +91,11 @@ app.get('/api/livros/:id', async (req, res) => {
 
 // Adicionar livro
 app.post('/api/livros', async (req, res) => {
-  // 1. Adicione codigo_barras à desestruturação
   const { titulo, autor, preco, estoque, codigo_barras } = req.body;
   try {
     const result = await db.query(
-      // 2. Adicione a coluna e o valor no comando SQL
-      'INSERT INTO livros (titulo, autor, preco, estoque, codigo_barras) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [titulo, autor, preco, estoque, codigo_barras]
+      'INSERT INTO livros (titulo, autor, preco, estoque, codigo_barras) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [titulo, autor, preco, estoque, codigo_barras || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -106,16 +104,15 @@ app.post('/api/livros', async (req, res) => {
   }
 });
 
+
 // Atualizar livro
 app.put('/api/livros/:id', async (req, res) => {
   const { id } = req.params;
-  // 1. Adicione codigo_barras à desestruturação
   const { titulo, autor, preco, estoque, codigo_barras } = req.body;
   try {
     const result = await db.query(
-      // 2. Adicione a coluna e o valor no comando SQL
       'UPDATE livros SET titulo = $1, autor = $2, preco = $3, estoque = $4, codigo_barras = $5 WHERE id = $6 RETURNING *',
-      [titulo, autor, preco, estoque, codigo_barras, id]
+      [titulo, autor, preco, estoque, codigo_barras || null, id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Livro não encontrado' });
@@ -151,7 +148,8 @@ app.get('/api/vendas', async (req, res) => {
         v.subtotal,    
         v.desconto,     
         v.total,         
-        v.data_venda, 
+        v.data_venda,
+        v.forma_pagamento, 
         json_agg(
           json_build_object(
             'livro', l.titulo, 
@@ -174,7 +172,7 @@ app.get('/api/vendas', async (req, res) => {
 
 // Registrar venda (otimizado)
 app.post('/api/vendas', async (req, res) => {
-  const { carrinho, pagamentos, nomeComprador, subtotal, desconto, total } = req.body;
+  const { carrinho, pagamentos, nomeComprador, subtotal, desconto, total, formaPagamento } = req.body;
 
   const client = await db.getClient();
 
@@ -183,10 +181,10 @@ app.post('/api/vendas', async (req, res) => {
 
     // Insere a venda na tabela 'vendas' com os campos corretos
     const vendaQuery = `
-      INSERT INTO vendas (nome_comprador, subtotal, desconto, total) 
-      VALUES ($1, $2, $3, $4) RETURNING id
+      INSERT INTO vendas (nome_comprador, subtotal, desconto, total, forma_pagamento) 
+      VALUES ($1, $2, $3, $4, $5) RETURNING id
     `;
-    const vendaResult = await client.query(vendaQuery, [nomeComprador, subtotal, desconto, total]);
+    const vendaResult = await client.query(vendaQuery, [nomeComprador, subtotal, desconto, total, formaPagamento]);
     const vendaId = vendaResult.rows[0].id;
 
     // Itera sobre cada item do carrinho para:

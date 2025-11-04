@@ -208,10 +208,18 @@ function TelaVenda() {
       return;
     }
 
+    const pagamentosNormalizados = pagamentos.map(p => ({
+      forma: String(p.forma || '').trim(),
+      valor: p.valor === '' || p.valor === null ? 0 : Number(p.valor)
+    }));
+
+    const formaPrincipal = (pagamentosNormalizados.find(p => p.forma) || {}).forma || null;
+
     // Envia carrinho no formato atual (backend existente já consome item.livro.id e item.livro.preco)
     const vendaData = {
       carrinho, // itens com livro (se cortesia, preço já é 0)
       pagamentos,
+      formaPagamento: formaPrincipal,
       nomeComprador,
       subtotal: subTotal,
       desconto: valorDesconto,
@@ -347,6 +355,7 @@ function TelaVenda() {
                     <MenuItem value="Dinheiro">Dinheiro</MenuItem>
                     <MenuItem value="Cartão de Crédito">Cartão de Crédito</MenuItem>
                     <MenuItem value="Cartão de Débito">Cartão de Débito</MenuItem>
+                    <MenuItem value="Voucher SEDUC">Voucher - SEDUC</MenuItem>
                   </Select>
                 </FormControl>
                 <TextField label="Valor" type="number" value={p.valor} onChange={(e) => handlePagamentoChange(index, 'valor', e.target.value)} fullWidth required inputProps={{ step: "0.01", min: "0" }} />
