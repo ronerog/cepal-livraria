@@ -213,13 +213,9 @@ function TelaVenda() {
       valor: p.valor === '' || p.valor === null ? 0 : Number(p.valor)
     }));
 
-    const formaPrincipal = (pagamentosNormalizados.find(p => p.forma) || {}).forma || null;
-
-    // Envia carrinho no formato atual (backend existente já consome item.livro.id e item.livro.preco)
     const vendaData = {
-      carrinho, // itens com livro (se cortesia, preço já é 0)
-      pagamentos,
-      formaPagamento: formaPrincipal,
+      carrinho,
+      pagamentos: pagamentosNormalizados,
       nomeComprador,
       subtotal: subTotal,
       desconto: valorDesconto,

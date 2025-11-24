@@ -8,6 +8,7 @@ import FormLivro from './pages/FormLivro';
 import TelaVenda from './pages/TelaVenda';
 import RelatorioVendas from './pages/RelatorioVendas';
 import RelatoriosPage from './pages/RelatoriosPage';
+import RelatorioVoucherSeduc from './pages/RelatorioVoucherSeduc';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             <Route path="/relatorio" element={<RelatorioVendas />} />
             <Route path="/lista-livros" element={<ListaLivros />} />
             <Route path="/relatorios" element={<RelatoriosPage />} />
+            <Route path="/relatorio-voucher" element={<RelatorioVoucherSeduc />} />
           </Routes>
         </Container>
       </main>
